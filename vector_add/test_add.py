@@ -1,21 +1,33 @@
 import time
 import torch
 import numpy as np
-from basic_triton import triton_add
+from basic_triton import add_kernel  # Import the kernel directly
 
 # Parameters to adjust
 VECTOR_SIZE = 1000  # Size of vectors to add
 NUM_RUNS = 10  # Number of times to run the benchmark
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+BLOCK_SIZE = 1024  # Block size for the kernel
 
-def benchmark_triton_add():
+def benchmark_triton_kernel():
     # Create input vectors
     a = torch.rand(VECTOR_SIZE, device=DEVICE)
     b = torch.rand(VECTOR_SIZE, device=DEVICE)
+    output = torch.empty_like(a)
+    n_elements = VECTOR_SIZE
+    
+    # Calculate grid size
+    grid = (n_elements + BLOCK_SIZE - 1) // BLOCK_SIZE
     
     # Warmup
     for _ in range(10):
-        c = triton_add(a, b)
+        add_kernel[(grid,)](
+            a,
+            b,
+            output,
+            n_elements,
+            BLOCK_SIZE=BLOCK_SIZE
+        )
     
     # Synchronize before timing
     torch.cuda.synchronize()
@@ -23,7 +35,13 @@ def benchmark_triton_add():
     # Benchmark
     start_time = time.time()
     for _ in range(NUM_RUNS):
-        c = triton_add(a, b)
+        add_kernel[(grid,)](
+            a,
+            b,
+            output,
+            n_elements,
+            BLOCK_SIZE=BLOCK_SIZE
+        )
     torch.cuda.synchronize()
     end_time = time.time()
     
@@ -39,7 +57,14 @@ def benchmark_triton_add():
     print(f"Total time: {total_time:.6f} seconds")
     print(f"Time per run: {time_per_run * 1000:.6f} ms")
     print(f"Performance: {tflops_per_iteration:.6f} TFLOPS per iteration")
+    
+    # Verify correctness
+    expected = a + b
+    max_diff = torch.max(torch.abs(output - expected)).item()
+    print(f"Maximum difference: {max_diff}")
+    assert max_diff < 1e-5, f"Results don't match! Max diff: {max_diff}"
+    print("Verification successful: Kernel works correctly!")
 
 if __name__ == "__main__":
-    print("Running Triton vector add benchmark...")
-    benchmark_triton_add()
+    print("Running Triton kernel benchmark...")
+    benchmark_triton_kernel()
