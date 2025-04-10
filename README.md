@@ -14,3 +14,4 @@ This repository serves as a learning resource for implementing and optimizing co
 ## Learning Resources
 
 - [ThunderKittens onboarding document](https://docs.google.com/document/d/15-Zvf6e0NLX1si4ml4sUOWCDlXNMtOWKiuo6CKZMEYA/edit?tab=t.0#heading=h.9t3n4v42ayve)
+- [Comprehensive introduction to Cuda cores](https://www.wevolver.com/article/understanding-nvidia-cuda-cores-a-comprehensive-guide)
